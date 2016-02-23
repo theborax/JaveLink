@@ -3,6 +3,7 @@ package eu.sathra.mavlink.generator;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -23,8 +24,9 @@ import org.xml.sax.SAXException;
 
 public class MCG {
 
+	private static final String MAVLINK_XML_RESOURCE = "/specs/common.xml";
 	private static final String JAVA_TEMPLATE_PATH = "templates/java.vtl";
-	private static final String OUTPUT_PATH = "generated/eu/sathra/mavlink/MAVLink.java";
+	private static final String OUTPUT_PATH = "src/main/java/eu/sathra/mavlink/MavLink.java";
 
 	private static final String ELEMENT_VERSION = "version";
 	private static final String ELEMENT_ENUM = "enum";
@@ -45,7 +47,7 @@ public class MCG {
 	public static void main(String[] args) {
 
 		try {
-			Document myDocument = loadMavlinkXML(args[0]);
+			Document myDocument = loadMavlinkXML();
 
 			VelocityEngine velocity = initVelocityEngine();
 			VelocityContext context = new VelocityContext();
@@ -56,7 +58,7 @@ public class MCG {
 			parseProtocolVersion(myDocument, context);
 			parseEnums(myDocument, context);
 			parseMessages(myDocument, context);
-			
+
 			/*
 			 * Write the output
 			 */
@@ -76,17 +78,17 @@ public class MCG {
 		velocity.setProperty(RuntimeConstants.RESOURCE_LOADER, "classpath");
 		velocity.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
 		velocity.init();
-		
+
 		return velocity;
 	}
-	
+
 	private static void parseProtocolVersion(Document document,
 			VelocityContext context) {
 		Node versionNode = document.getElementsByTagName(ELEMENT_VERSION).item(
 				0);
 		context.put(CONTEXT_VERSION, versionNode.getTextContent());
 	}
-	
+
 	private static void parseEnums(Document document,
 			VelocityContext context) {
 		NodeList docEnums = document.getElementsByTagName(ELEMENT_ENUM);
@@ -99,7 +101,7 @@ public class MCG {
 			myEnum.setName(myElement.getAttribute(ATTR_NAME));
 
 			System.out.println("Parsing enum: " + myEnum.getName());
-			
+
 			Node descriptionNode = myElement.getElementsByTagName(
 					ATTR_DESCRIPTION).item(0);
 
@@ -136,7 +138,7 @@ public class MCG {
 
 		context.put(CONTEXT_ENUMS, enumsSet);
 	}
-	
+
 	private static void parseMessages(Document document, VelocityContext context) {
 
 		NodeList messages = document
@@ -153,7 +155,7 @@ public class MCG {
 			myMavMessage.setName(myElement.getAttribute(ATTR_NAME));
 
 			System.out.println("Parsing message: " + myMavMessage.getName());
-			
+
 			NodeList children = myElement.getChildNodes();
 
 			for (int d = 0; d < children.getLength(); ++d) {
@@ -204,12 +206,13 @@ public class MCG {
 		context.put(CONTEXT_MESSAGES_LIST, mMessages);
 	}
 
-	private static Document loadMavlinkXML(String path)
+	private static Document loadMavlinkXML()
 			throws ParserConfigurationException, SAXException, IOException {
-		File mavlinkXMLFile = new File(path);
-		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-		return dBuilder.parse(mavlinkXMLFile);
+		try(InputStream xmlResource = MCG.class.getResourceAsStream(MAVLINK_XML_RESOURCE)) {
+			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+			return dBuilder.parse(xmlResource);
+		}
 	}
 
 	private static void writeOutput(String outputPath, Template template,

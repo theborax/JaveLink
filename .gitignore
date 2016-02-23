@@ -34,3 +34,4 @@ local.properties
 
 # Miscelaneus
 common.xml
+/target/
